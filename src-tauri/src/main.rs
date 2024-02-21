@@ -7,6 +7,18 @@ use rusqlite::{params, Connection, Result};
 
 const DB_PATH: &str = "E:\\tp\\tp.db3";
 
+#[derive(serde::Serialize)]
+struct AppResponse<T> {
+    message: String,
+    data: Option<T>,
+}
+
+#[derive(serde::Serialize)]
+struct CountdownShow {
+    time_remaining: String,
+    progress_remaining: f32,
+}
+
 #[derive(Debug)]
 #[allow(dead_code)]
 struct CountDown {
@@ -26,15 +38,25 @@ fn main() {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-fn get_time(countdown_id: u16) -> String {
+fn get_time(countdown_id: u16) -> Result<CountdownShow, String> {
     println!("countdown_id: {}", countdown_id);
-    if countdown_id < 1 {
-        "45:60".into()
+    Ok(if countdown_id < 1 {
+        CountdownShow {
+            time_remaining: "45:60".to_string(),
+            progress_remaining: 0.0,
+        }
     } else {
-        let time_remaining = compute_time(countdown_id).expect("time compute error!!!");
-        println!("time: {}", time_remaining);
-        time_remaining
-    }
+        let countdown = query_db_by_id(countdown_id).expect("查询id不存在");
+        CountdownShow {
+            time_remaining: Utc
+                .timestamp_opt(countdown.cd_end_time - Utc::now().timestamp(), 0)
+                .unwrap()
+                .format("%M:%S")
+                .to_string(),
+            progress_remaining: (countdown.cd_end_time - Utc::now().timestamp()) as f32
+                / (countdown.cd_end_time - countdown.cd_start_time) as f32,
+        }
+    })
 }
 
 #[tauri::command]
@@ -156,14 +178,4 @@ fn update_db_by_id(conn: &Connection, countdown_id: u16, end_time: String) -> Re
         "UPDATE countdown SET cd_end_time = ?1 WHERE id = ?2;",
         params![end_time, countdown_id],
     )
-}
-
-fn compute_time(countdown_id: u16) -> Result<String> {
-    let countdown = query_db_by_id(countdown_id).expect("查询id不存在！！！");
-    let time_remaining = Utc
-        .timestamp_opt(countdown.cd_end_time - Utc::now().timestamp(), 0)
-        .unwrap()
-        .format("%H:%M:%S")
-        .to_string();
-    Ok(time_remaining)
 }

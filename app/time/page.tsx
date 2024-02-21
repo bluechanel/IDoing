@@ -9,17 +9,23 @@ import { invoke } from '@tauri-apps/api/tauri'
 // @ts-ignore
 const TinyRing = dynamic(() => import('@ant-design/plots').then(({ Tiny }) => Tiny.Ring), { ssr: false })
 
+interface CountdownShow {
+    time_remaining: string,
+    progress_remaining: number,
+}
 
 const Time: React.FC = () => {
 
-    const [data, setData] = useState("45:60");
-    const [state, setState] = useState(Boolean);
+
+    const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1 });
+    const [state, setState] = useState<Boolean>(false);
     const [countdownId, setcountdownId] = useState(0);
 
 
     const fetchData = async () => {
         console.log("当前查询的计时id为：" + countdownId);
-        const respTime = await invoke<string>('get_time', { countdown_id: countdownId });
+        const respTime = await invoke<CountdownShow>('get_time', { countdown_id: countdownId });
+        console.log(respTime);
         setData(respTime);
     }
 
@@ -34,6 +40,7 @@ const Time: React.FC = () => {
         await invoke<string>('stop', { countdown_id: countdownId });
         setcountdownId(0);
         setState(false);
+        setData({ time_remaining: "45:60", progress_remaining: 1 });
     }
 
     const extendCountdown = async () => {
@@ -50,14 +57,15 @@ const Time: React.FC = () => {
     }, [countdownId]); // 空依赖数组确保定时器只在组件加载时设置一次
 
     const config = {
-        percent: 0.7,
+        percent: data.progress_remaining,
         color: ['#E8EFF5', '#1677ff'],
+        animate: false,
         annotations: [
             {
                 type: 'text',
                 radius: 0.9,
                 style: {
-                    text: data,
+                    text: data.time_remaining,
                     x: '50%',
                     y: '50%',
                     textAlign: 'center',
