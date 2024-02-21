@@ -2,7 +2,7 @@
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 extern crate chrono;
 
-use chrono::{DateTime, Duration, Local};
+use chrono::{TimeZone, Utc};
 use rusqlite::{params, Connection, Result};
 
 const DB_PATH: &str = "E:\\tp\\tp.db3";
@@ -13,8 +13,8 @@ struct CountDown {
     id: u16,
     cd_name: String,
     cd_type: String,
-    cd_start_time: String,
-    cd_end_time: String,
+    cd_start_time: i64,
+    cd_end_time: i64,
 }
 
 fn main() {
@@ -49,25 +49,27 @@ fn add() -> i64 {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-fn stop(countdown_id: u16) -> String {
+fn stop(countdown_id: u16) {
     let conn = Connection::open(DB_PATH).expect("db error");
     // 修改结束时间为当前时间
-    let local_time = Local::now().format("%Y-%m-%d %H:%M:%S %z").to_string();
-    update_db_by_id(&conn, countdown_id, local_time).expect("update faild");
-    // 关闭轮询
-    println!("stop");
-    "stop".into()
+    let current_time = Utc::now().timestamp().to_string();
+    update_db_by_id(&conn, countdown_id, current_time).expect("update faild");
+    println!("已停止计时");
 }
 
 #[tauri::command(rename_all = "snake_case")]
-fn extend(countdown_id: u16) -> String {
+fn extend(countdown_id: u16) {
     let conn = Connection::open(DB_PATH).expect("db error");
     // 查询当前结束时间
-    let current_time = query_db_by_id(countdown_id).expect("未查询到数据!!!");
+    let current_countdown = query_db_by_id(countdown_id).expect("未查询到数据!!!");
     // 修改结束时间+5min
-    // 关闭轮询
-    println!("extend");
-    "extend".into()
+    update_db_by_id(
+        &conn,
+        countdown_id,
+        (current_countdown.cd_end_time + 5 * 60).to_string(),
+    )
+    .expect("update faild");
+    println!("增加5分钟");
 }
 
 fn init_db() -> Result<()> {
@@ -78,8 +80,8 @@ fn init_db() -> Result<()> {
             id    INTEGER PRIMARY KEY,
             cd_name  TEXT NOT NULL,
             cd_type  TEXT NOT NULL,
-            cd_start_time  TEXT NOT NULL,
-            cd_end_time  TEXT NOT NULL
+            cd_start_time  INTEGER NOT NULL,
+            cd_end_time  INTEGER NOT NULL
         )",
         (), // empty list of parameters.
     ) {
@@ -92,19 +94,24 @@ fn init_db() -> Result<()> {
 fn add_countdown() -> Result<i64> {
     let conn = Connection::open(DB_PATH)?;
 
+    let current_timstamp = Utc::now().timestamp();
+
     let cd = CountDown {
         id: 0,
         cd_name: "默认".to_string(),
         cd_type: "work".to_string(),
-        cd_start_time: Local::now().format("%Y-%m-%d %H:%M:%S %z").to_string(),
-        cd_end_time: (Local::now() + Duration::minutes(45))
-            .format("%Y-%m-%d %H:%M:%S %z")
-            .to_string(),
+        cd_start_time: current_timstamp,
+        cd_end_time: current_timstamp + 45 * 60,
     };
 
     let mut stmt = conn
     .prepare("INSERT INTO countdown (cd_name, cd_type, cd_start_time, cd_end_time) VALUES (?1, ?2, ?3, ?4)")?;
-    let id = stmt.insert([&cd.cd_name, &cd.cd_type, &cd.cd_start_time, &cd.cd_end_time])?;
+    let id = stmt.insert([
+        &cd.cd_name,
+        &cd.cd_type,
+        &cd.cd_start_time.to_string(),
+        &cd.cd_end_time.to_string(),
+    ])?;
     Ok(id)
 }
 
@@ -153,13 +160,10 @@ fn update_db_by_id(conn: &Connection, countdown_id: u16, end_time: String) -> Re
 
 fn compute_time(countdown_id: u16) -> Result<String> {
     let countdown = query_db_by_id(countdown_id).expect("查询id不存在！！！");
-    let time_remaining = DateTime::parse_from_str(&countdown.cd_end_time, "%Y-%m-%d %H:%M:%S %z")
-        .expect(&countdown.cd_end_time);
-    let local_time: DateTime<Local> = Local::now();
-    let time = time_remaining.signed_duration_since(local_time);
-    Ok(format!(
-        "{}:{}",
-        time.num_minutes() % 60,
-        time.num_seconds() % 60
-    ))
+    let time_remaining = Utc
+        .timestamp_opt(countdown.cd_end_time - Utc::now().timestamp(), 0)
+        .unwrap()
+        .format("%H:%M:%S")
+        .to_string();
+    Ok(time_remaining)
 }
