@@ -5,6 +5,9 @@ import React, { useState } from 'react';
 import { useEffect } from 'react'
 import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri'
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
+
+
 
 // @ts-ignore
 const TinyRing = dynamic(() => import('@ant-design/plots').then(({ Tiny }) => Tiny.Ring), { ssr: false })
@@ -12,21 +15,26 @@ const TinyRing = dynamic(() => import('@ant-design/plots').then(({ Tiny }) => Ti
 interface CountdownShow {
     time_remaining: string,
     progress_remaining: number,
+    is_tip: boolean,
+    tip_message: string,
 }
 
 const Time: React.FC = () => {
 
 
-    const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1 });
+    const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     const [state, setState] = useState<Boolean>(false);
     const [countdownId, setcountdownId] = useState(0);
 
-
-    const fetchData = async () => {
-        console.log("当前查询的计时id为：" + countdownId);
-        const respTime = await invoke<CountdownShow>('get_time', { countdown_id: countdownId });
-        console.log(respTime);
-        setData(respTime);
+    const tip = async (message: string) => {
+        let permissionGranted = await isPermissionGranted();
+        if (!permissionGranted) {
+            const permission = await requestPermission();
+            permissionGranted = permission === 'granted';
+        }
+        if (permissionGranted) {
+            sendNotification({ title: 'tp-app', body: message });
+        }
     }
 
     const startCountdown = async () => {
@@ -40,7 +48,7 @@ const Time: React.FC = () => {
         await invoke<string>('stop', { countdown_id: countdownId });
         setcountdownId(0);
         setState(false);
-        setData({ time_remaining: "45:60", progress_remaining: 1 });
+        setData({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     }
 
     const extendCountdown = async () => {
@@ -51,7 +59,14 @@ const Time: React.FC = () => {
     useEffect(() => {
         // 设置轮询间隔
         if (countdownId > 0) {
-            const intervalId = setInterval(fetchData, 1000); // 每秒轮询一次
+            const intervalId = setInterval(async () => {
+                const respTime = await invoke<CountdownShow>('get_time', { countdown_id: countdownId });
+                setData(respTime);
+                if (respTime.is_tip) {
+                    tip(respTime.tip_message)
+                    clearInterval(intervalId);
+                }
+            }, 1000); // 每秒轮询一次
             return () => clearInterval(intervalId);
         }
     }, [countdownId]); // 空依赖数组确保定时器只在组件加载时设置一次
