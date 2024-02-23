@@ -6,6 +6,8 @@ import { useEffect } from 'react'
 import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri'
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
+// import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
+import { info, attachConsole } from "tauri-plugin-log-api";
 
 
 
@@ -21,7 +23,7 @@ interface CountdownShow {
 
 const Time: React.FC = () => {
 
-
+    attachConsole();
     const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     const [state, setState] = useState<Boolean>(false);
     const [countdownId, setcountdownId] = useState(0);
@@ -40,7 +42,7 @@ const Time: React.FC = () => {
     const startCountdown = async () => {
         const id = await invoke<number>('add');
         setcountdownId(id);
-        console.log("新建计时id为：" + id);
+        info("新建计时id为：" + id);
         setState(true);
     }
 

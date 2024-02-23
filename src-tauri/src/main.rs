@@ -1,9 +1,11 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
-// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 extern crate chrono;
 
 use chrono::{TimeZone, Utc};
+use log::{error, info, warn};
 use rusqlite::{params, Connection, Result};
+use tauri_plugin_log::LogTarget;
 
 const DB_PATH: &str = "E:\\tp\\tp.db3";
 
@@ -28,6 +30,11 @@ struct CountDown {
 fn main() {
     let _ = init_db();
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::default()
+                .targets([LogTarget::LogDir, LogTarget::Stdout, LogTarget::Webview])
+                .build()
+        )
         .invoke_handler(tauri::generate_handler![get_time, add, stop, extend])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -35,35 +42,44 @@ fn main() {
 
 #[tauri::command(rename_all = "snake_case")]
 fn get_time(countdown_id: u16) -> Result<CountdownShow, String> {
-    println!("countdown_id: {}", countdown_id);
+    info!("countdown_id: {}", countdown_id);
+    let countdown_init = CountdownShow {
+        time_remaining: "45:60".to_string(),
+        progress_remaining: 1.0,
+        is_tip: false,
+        tip_message: "".to_string(),
+    };
     Ok(if countdown_id < 1 {
-        CountdownShow {
-            time_remaining: "45:60".to_string(),
-            progress_remaining: 1.0,
-            is_tip: false,
-            tip_message: "".to_string(),
-        }
+        countdown_init
     } else {
-        let countdown = query_db_by_id(countdown_id).expect("查询id不存在");
-        let time_remaining = countdown.cd_end_time - Utc::now().timestamp();
-        if time_remaining <= 0 {
-            CountdownShow {
-                time_remaining: "00:00".to_string(),
-                progress_remaining: 0.0,
-                is_tip: true,
-                tip_message: "专注时间结束".to_string(),
+        let countdown = query_db_by_id(countdown_id);
+        match countdown {
+            Err(err) => {
+                error!("id 未查询到数据！！！{}", err);
+                countdown_init
             }
-        } else {
-            CountdownShow {
-                time_remaining: Utc
-                    .timestamp_opt(time_remaining, 0)
-                    .unwrap()
-                    .format("%M:%S")
-                    .to_string(),
-                progress_remaining: (countdown.cd_end_time - Utc::now().timestamp()) as f32
-                    / (countdown.cd_end_time - countdown.cd_start_time) as f32,
-                is_tip: false,
-                tip_message: "".to_string(),
+            Ok(countdown) => {
+                let time_remaining = countdown.cd_end_time - Utc::now().timestamp();
+                if time_remaining <= 0 {
+                    CountdownShow {
+                        time_remaining: "00:00".to_string(),
+                        progress_remaining: 0.0,
+                        is_tip: true,
+                        tip_message: "专注时间结束".to_string(),
+                    }
+                } else {
+                    CountdownShow {
+                        time_remaining: Utc
+                            .timestamp_opt(time_remaining, 0)
+                            .unwrap()
+                            .format("%M:%S")
+                            .to_string(),
+                        progress_remaining: (countdown.cd_end_time - Utc::now().timestamp()) as f32
+                            / (countdown.cd_end_time - countdown.cd_start_time) as f32,
+                        is_tip: false,
+                        tip_message: "".to_string(),
+                    }
+                }
             }
         }
     })
@@ -71,13 +87,7 @@ fn get_time(countdown_id: u16) -> Result<CountdownShow, String> {
 
 #[tauri::command]
 fn add() -> i64 {
-    let add_result = add_countdown();
-
-    let countdown_id = match add_result {
-        Ok(cd) => cd,
-        Err(e) => panic!("创建计时器失败{}", e),
-    };
-    countdown_id
+    add_countdown().expect("创建计时器失败")
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -85,23 +95,32 @@ fn stop(countdown_id: u16) {
     let conn = Connection::open(DB_PATH).expect("db error");
     // 修改结束时间为当前时间
     let current_time = Utc::now().timestamp().to_string();
-    update_db_by_id(&conn, countdown_id, current_time).expect("update faild");
-    println!("已停止计时");
+    match update_db_by_id(&conn, countdown_id, current_time) {
+        Ok(_) => {
+            info!("已停止计时!!!")
+        }
+        Err(err) => {
+            error!("停止错误!!!{}", err)
+        }
+    }
 }
 
 #[tauri::command(rename_all = "snake_case")]
-fn extend(countdown_id: u16) {
+fn extend(countdown_id: u16) -> () {
     let conn = Connection::open(DB_PATH).expect("db error");
-    // 查询当前结束时间
-    let current_countdown = query_db_by_id(countdown_id).expect("未查询到数据!!!");
-    // 修改结束时间+5min
-    update_db_by_id(
-        &conn,
-        countdown_id,
-        (current_countdown.cd_end_time + 5 * 60).to_string(),
-    )
-    .expect("update faild");
-    println!("增加5分钟");
+    match query_db_by_id(countdown_id) {
+        Ok(current_countdown) => match update_db_by_id(
+            &conn,
+            countdown_id,
+            (current_countdown.cd_end_time + 5 * 60).to_string(),
+        ) {
+            Ok(_) => (),
+            Err(err) => error!("更新失败 {}", err),
+        },
+        Err(err) => {
+            error!("id 未查询到数据！！！{}", err)
+        }
+    }
 }
 
 fn init_db() -> Result<()> {
@@ -117,8 +136,8 @@ fn init_db() -> Result<()> {
         )",
         (), // empty list of parameters.
     ) {
-        Ok(_) => print!("创建表成功"),
-        Err(error) => println!("表创建失败:{}", error),
+        Ok(_) => warn!("创建表成功"),
+        Err(error) => error!("表创建失败:{}", error),
     };
     Ok(())
 }
