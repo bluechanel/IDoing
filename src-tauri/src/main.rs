@@ -127,7 +127,7 @@ fn init_db() -> Result<()> {
     let conn = Connection::open(DB_PATH)?;
     // 初始化db
     match conn.execute(
-        "CREATE TABLE countdown (
+        "CREATE TABLE IF NOT EXISTS countdown (
             id    INTEGER PRIMARY KEY,
             cd_name  TEXT NOT NULL,
             cd_type  TEXT NOT NULL,

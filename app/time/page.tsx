@@ -6,13 +6,14 @@ import { useEffect } from 'react'
 import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri'
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
-// import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
-import { info, attachConsole } from "tauri-plugin-log-api";
+import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
 
 
 
 // @ts-ignore
 const TinyRing = dynamic(() => import('@ant-design/plots').then(({ Tiny }) => Tiny.Ring), { ssr: false })
+
+
 
 interface CountdownShow {
     time_remaining: string,
@@ -22,6 +23,7 @@ interface CountdownShow {
 }
 
 const Time: React.FC = () => {
+
 
     attachConsole();
     const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
