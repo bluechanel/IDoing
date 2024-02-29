@@ -13,8 +13,8 @@ const RootLayout = ({ children }: React.PropsWithChildren) => (
           <Flex gap="middle" vertical className='w-8 h-max' justify="center" align="center">
             <Button type="primary" shape="circle">icon</Button>
             <Button type="primary" shape="circle" icon={<ClockCircleOutlined />} href='/time' />
-            <Button type="primary" shape="circle" icon={<PieChartOutlined />} />
-            <Button type="primary" shape="circle" icon={<SettingOutlined />} />
+            <Button type="primary" shape="circle" icon={<PieChartOutlined />} href='analyse' />
+            <Button type="primary" shape="circle" icon={<SettingOutlined />} href='settings'/>
           </Flex>
         </Sider>
         <Content>
