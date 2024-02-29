@@ -2,12 +2,11 @@
 
 import dynamic from 'next/dynamic';
 import React, { useState } from 'react';
-import { useEffect } from 'react'
 import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri'
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
 import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
-import Countdown from './countdown';
+import { Countdown } from './countdown';
 
 
 
@@ -23,8 +22,24 @@ interface CountdownShow {
 const Timer: React.FC = () => {
 
     attachConsole();
+
+
+    const defaultCD = new Countdown(100, (remainingTime, remainingProgress) => {
+        if (remainingTime > 60 * 60) {
+            setTimeData({ remainingTime: `${Math.floor(remainingTime / 3600).toString().padStart(2, '0')}:${Math.floor((remainingTime % 3600) / 60).toString().padStart(2, '0')}:${Math.floor(remainingTime % 60).toString().padStart(2, '0')}`, remainingProgress: remainingProgress });
+        } else {
+            setTimeData({ remainingTime: `${Math.floor(remainingTime / 60).toString().padStart(2, "0")}:${Math.floor(remainingTime % 60).toString().padStart(2, "0")}`, remainingProgress: remainingProgress });
+        };
+    }, () => {
+        setState(false);
+        tip("专注时间结束!");
+    }
+    );
+
+    const defaultCS: CountdownShow = { remainingTime: "45:60", remainingProgress: 1 };
     const [state, setState] = useState<Boolean>(false);
-    const [timeData, setTimeData] = useState<CountdownShow>({ remainingTime: "45:60", remainingProgress: 1 });
+    const [timeData, setTimeData] = useState<CountdownShow>(defaultCS);
+    const [cd, setCD] = useState<Countdown>(defaultCD);
 
     const tip = async (message: string) => {
         let permissionGranted = await isPermissionGranted();
@@ -36,33 +51,20 @@ const Timer: React.FC = () => {
             sendNotification({ title: 'tp-app', body: message });
         }
     }
-
-
-    const countdown = Countdown.getInstance(100, (remainingTime, remainingProgress) => {
-        if (remainingTime > 60 * 60) {
-            setTimeData({ remainingTime: `${Math.floor(remainingTime / 3600).toString().padStart(2, '0')}:${Math.floor((remainingTime % 3600) / 60).toString().padStart(2, '0')}:${Math.floor(remainingTime % 60).toString().padStart(2, '0')}`, remainingProgress: remainingProgress });
-        } else {
-            setTimeData({ remainingTime: `${Math.floor(remainingTime / 60).toString().padStart(2, "0")}:${Math.floor(remainingTime % 60).toString().padStart(2, "0")}`, remainingProgress: remainingProgress });
-        };
-    }, () => {
-        setState(false);
-        tip("专注时间结束!");
-    }
-    )
-
-
     const startCountdown = () => {
-        countdown.start()
+        cd.start();
         setState(true);
     }
 
     const stopCountdown = () => {
-        countdown.stop()
+        cd.stop();
         setState(false);
+        setCD(defaultCD);
+        setTimeData(defaultCS);
     }
 
     const extendCountdown = () => {
-        countdown.reset()
+        cd.extend(5 * 60)
     }
 
     const config = {
