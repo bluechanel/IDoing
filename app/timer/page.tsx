@@ -22,7 +22,7 @@ interface CountdownShow {
     tip_message: string,
 }
 
-const Time: React.FC = () => {
+const Timer: React.FC = () => {
 
 
     attachConsole();
@@ -115,4 +115,4 @@ const Time: React.FC = () => {
         </Flex>
     )
 };
-export default Time;
+export default Timer;
