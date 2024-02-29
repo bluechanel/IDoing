@@ -7,28 +7,24 @@ import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri'
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
 import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
+import Countdown from './countdown';
 
 
 
 // @ts-ignore
 const TinyRing = dynamic(() => import('@ant-design/plots').then(({ Tiny }) => Tiny.Ring), { ssr: false })
 
-
-
 interface CountdownShow {
-    time_remaining: string,
-    progress_remaining: number,
-    is_tip: boolean,
-    tip_message: string,
+    remainingTime: string,
+    remainingProgress: number,
 }
 
-const Time: React.FC = () => {
 
+const Timer: React.FC = () => {
 
     attachConsole();
-    const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     const [state, setState] = useState<Boolean>(false);
-    const [countdownId, setcountdownId] = useState(0);
+    const [timeData, setTimeData] = useState<CountdownShow>({ remainingTime: "45:60", remainingProgress: 1 });
 
     const tip = async (message: string) => {
         let permissionGranted = await isPermissionGranted();
@@ -41,42 +37,36 @@ const Time: React.FC = () => {
         }
     }
 
-    const startCountdown = async () => {
-        const id = await invoke<number>('add');
-        setcountdownId(id);
-        info("新建计时id为：" + id);
-        setState(true);
-    }
 
-    const stopCountdown = async () => {
-        await invoke<string>('stop', { countdown_id: countdownId });
-        setcountdownId(0);
+    const countdown = Countdown.getInstance(100, (remainingTime, remainingProgress) => {
+        if (remainingTime > 60 * 60) {
+            setTimeData({ remainingTime: `${Math.floor(remainingTime / 3600).toString().padStart(2, '0')}:${Math.floor((remainingTime % 3600) / 60).toString().padStart(2, '0')}:${Math.floor(remainingTime % 60).toString().padStart(2, '0')}`, remainingProgress: remainingProgress });
+        } else {
+            setTimeData({ remainingTime: `${Math.floor(remainingTime / 60).toString().padStart(2, "0")}:${Math.floor(remainingTime % 60).toString().padStart(2, "0")}`, remainingProgress: remainingProgress });
+        };
+    }, () => {
         setState(false);
-        setData({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
+        tip("专注时间结束!");
     }
+    )
 
-    const extendCountdown = async () => {
-        await invoke<string>('extend', { countdown_id: countdownId });
+
+    const startCountdown = () => {
+        countdown.start()
         setState(true);
     }
 
-    useEffect(() => {
-        // 设置轮询间隔
-        if (countdownId > 0) {
-            const intervalId = setInterval(async () => {
-                const respTime = await invoke<CountdownShow>('get_time', { countdown_id: countdownId });
-                setData(respTime);
-                if (respTime.is_tip) {
-                    tip(respTime.tip_message)
-                    clearInterval(intervalId);
-                }
-            }, 1000); // 每秒轮询一次
-            return () => clearInterval(intervalId);
-        }
-    }, [countdownId]); // 空依赖数组确保定时器只在组件加载时设置一次
+    const stopCountdown = () => {
+        countdown.stop()
+        setState(false);
+    }
+
+    const extendCountdown = () => {
+        countdown.reset()
+    }
 
     const config = {
-        percent: data.progress_remaining,
+        percent: timeData.remainingProgress,
         color: ['#E8EFF5', '#1677ff'],
         animate: false,
         annotations: [
@@ -84,7 +74,7 @@ const Time: React.FC = () => {
                 type: 'text',
                 radius: 0.9,
                 style: {
-                    text: data.time_remaining,
+                    text: timeData.remainingTime,
                     x: '50%',
                     y: '50%',
                     textAlign: 'center',
@@ -115,4 +105,4 @@ const Time: React.FC = () => {
         </Flex>
     )
 };
-export default Time;
+export default Timer;
