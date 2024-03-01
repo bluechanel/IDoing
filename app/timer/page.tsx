@@ -1,10 +1,9 @@
 "use client"
 
 import dynamic from 'next/dynamic';
-import React, { useState } from 'react';
-import { useEffect } from 'react'
+import React, { useEffect, useReducer, useState } from 'react';
 import { Button, Flex } from 'antd';
-import { invoke } from '@tauri-apps/api/tauri'
+import { invoke } from '@tauri-apps/api/tauri';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
 import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
 
@@ -28,7 +27,8 @@ const Timer: React.FC = () => {
     attachConsole();
     const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     const [state, setState] = useState<Boolean>(false);
-    const [countdownId, setcountdownId] = useState(0);
+    const [countdownId, setCountdownId] = useState<number | undefined>(undefined);
+    const [timerID, setTimerID] = useState<number | undefined>(undefined);
 
     const tip = async (message: string) => {
         let permissionGranted = await isPermissionGranted();
@@ -41,39 +41,38 @@ const Timer: React.FC = () => {
         }
     }
 
-    const startCountdown = async () => {
-        const id = await invoke<number>('add');
-        setcountdownId(id);
-        info("新建计时id为：" + id);
-        setState(true);
-    }
+    const fetchData = async () => invoke<CountdownShow>('get_time', { countdown_id: countdownId }).then((respTime) => {
+        setData(respTime);
+        if (respTime.is_tip) {
+            tip(respTime.tip_message);
+        };
+        if (respTime.progress_remaining <= 0) {
+            clearInterval(timerID);
+        }
+    });
 
-    const stopCountdown = async () => {
-        await invoke<string>('stop', { countdown_id: countdownId });
-        setcountdownId(0);
+
+    const startCountdown = async () => invoke<number>('add').then((id) => {
+        console.log("当前计时器id为:" + id);
+        setCountdownId(id);
+        setState(true);
+    })
+
+
+    const stopCountdown = async () => invoke<string>('stop', { countdown_id: countdownId }).then(() => {
+        clearInterval(timerID);
         setState(false);
         setData({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
-    }
+    })
 
-    const extendCountdown = async () => {
-        await invoke<string>('extend', { countdown_id: countdownId });
-        setState(true);
-    }
+    const extendCountdown = async () => invoke<string>('extend', { countdown_id: countdownId }).then(() => { setState(true) })
 
     useEffect(() => {
-        // 设置轮询间隔
-        if (countdownId > 0) {
-            const intervalId = setInterval(async () => {
-                const respTime = await invoke<CountdownShow>('get_time', { countdown_id: countdownId });
-                setData(respTime);
-                if (respTime.is_tip) {
-                    tip(respTime.tip_message)
-                    clearInterval(intervalId);
-                }
-            }, 1000); // 每秒轮询一次
-            return () => clearInterval(intervalId);
+        if (countdownId != undefined) {
+            setTimerID(window.setInterval(fetchData, 1000));
         }
-    }, [countdownId]); // 空依赖数组确保定时器只在组件加载时设置一次
+    }, [countdownId]);
+
 
     const config = {
         percent: data.progress_remaining,
