@@ -48,6 +48,8 @@ const Timer: React.FC = () => {
         };
         if (respTime.progress_remaining <= 0) {
             clearInterval(timerID);
+            setState(false);
+
         }
     });
 
