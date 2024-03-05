@@ -1,11 +1,11 @@
 "use client"
 
 import dynamic from 'next/dynamic';
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri';
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/api/notification';
 import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
+import { tip } from '../notification';
 
 
 
@@ -21,25 +21,35 @@ interface CountdownShow {
     tip_message: string,
 }
 
-const Timer: React.FC = () => {
 
+function TimerButton({ state, startFunc, stopFunc, extendFunc }: { state: number, startFunc: () => {}, stopFunc: () => {}, extendFunc: () => {} }) {
+    if (state == 0) {
+        return <Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
+            Start
+        </Button>
+    } else if (state == 1) {
+        return <><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={extendFunc}>
+            Extend(5 min)
+        </Button><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={stopFunc}>
+                End Focus
+            </Button></>
+    } else {
+        return <Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
+            Start
+        </Button>
+    }
+};
+
+
+
+export default function Timer() {
 
     attachConsole();
     const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
-    const [state, setState] = useState<Boolean>(false);
+    const [state, setState] = useState<number>(0);
     const [countdownId, setCountdownId] = useState<number | undefined>(undefined);
     const [timerID, setTimerID] = useState<number | undefined>(undefined);
 
-    const tip = async (message: string) => {
-        let permissionGranted = await isPermissionGranted();
-        if (!permissionGranted) {
-            const permission = await requestPermission();
-            permissionGranted = permission === 'granted';
-        }
-        if (permissionGranted) {
-            sendNotification({ title: 'tp-app', body: message });
-        }
-    }
 
     const fetchData = async () => invoke<CountdownShow>('get_time', { countdown_id: countdownId }).then((respTime) => {
         setData(respTime);
@@ -48,8 +58,7 @@ const Timer: React.FC = () => {
         };
         if (respTime.progress_remaining <= 0) {
             clearInterval(timerID);
-            setState(false);
-
+            setState(0);
         }
     });
 
@@ -57,23 +66,26 @@ const Timer: React.FC = () => {
     const startCountdown = async () => invoke<number>('add').then((id) => {
         console.log("当前计时器id为:" + id);
         setCountdownId(id);
-        setState(true);
+        setState(1);
     })
 
 
     const stopCountdown = async () => invoke<string>('stop', { countdown_id: countdownId }).then(() => {
         clearInterval(timerID);
-        setState(false);
+        setState(0);
         setData({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     })
 
-    const extendCountdown = async () => invoke<string>('extend', { countdown_id: countdownId }).then(() => { setState(true) })
+    const extendCountdown = async () => invoke<string>('extend', { countdown_id: countdownId }).then(() => { setState(1) })
+
 
     useEffect(() => {
         if (countdownId != undefined) {
             setTimerID(window.setInterval(fetchData, 1000));
         }
     }, [countdownId]);
+
+
 
 
     const config = {
@@ -100,20 +112,14 @@ const Timer: React.FC = () => {
             <section>
                 <TinyRing {...config} />
                 <Flex gap="middle" vertical justify='center' align='center'>
-                    {state ? (
-                        <><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={extendCountdown}>
-                            Extend(5 min)
-                        </Button><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={stopCountdown}>
-                                End Focus
-                            </Button></>
-                    ) : (
-                        <Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startCountdown}>
-                            Start
-                        </Button>
-                    )}
+                    <TimerButton
+                        state={state}
+                        startFunc={startCountdown}
+                        stopFunc={stopCountdown}
+                        extendFunc={extendCountdown}
+                    />
                 </Flex>
             </section>
         </Flex>
     )
 };
-export default Timer;
