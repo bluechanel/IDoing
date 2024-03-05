@@ -103,6 +103,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-log",
+ "tauri-plugin-store",
 ]
 
 [[package]]
@@ -3581,7 +3582,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-log"
 version = "0.0.0"
-source = "git+https://github.com/tauri-apps/plugins-workspace?branch=v1#58176114f98c977e3435aba3aa910b61115a394e"
+source = "git+https://github.com/tauri-apps/plugins-workspace?branch=v1#19aa2204115e7304681cb40faf7512aba525bc5e"
 dependencies = [
  "byte-unit",
  "fern",
@@ -3591,6 +3592,18 @@ dependencies = [
  "serde_repr",
  "tauri",
  "time",
+]
+
+[[package]]
+name = "tauri-plugin-store"
+version = "0.0.0"
+source = "git+https://github.com/tauri-apps/plugins-workspace?branch=v1#19aa2204115e7304681cb40faf7512aba525bc5e"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror",
 ]
 
 [[package]]

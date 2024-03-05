@@ -3738,6 +3738,12 @@ tape@^4.5.1:
   dependencies:
     "@tauri-apps/api" "1.5.3"
 
+"tauri-plugin-store-api@https://github.com/tauri-apps/tauri-plugin-store#v1":
+  version "0.0.0"
+  resolved "https://github.com/tauri-apps/tauri-plugin-store#6f3daa12c4f69ca1586427307f518c9ad660d168"
+  dependencies:
+    "@tauri-apps/api" "1.5.3"
+
 text-table@^0.2.0:
   version "0.2.0"
   resolved "https://registry.npmjs.org/text-table/-/text-table-0.2.0.tgz"

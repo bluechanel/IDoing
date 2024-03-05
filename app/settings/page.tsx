@@ -2,18 +2,21 @@
 
 
 import React from 'react';
-import { Button, Flex } from 'antd';
+import { Button, Flex, InputNumber } from 'antd';
+import { Config } from '../config';
 
 
 
 
-const Setting: React.FC = () => {
+export default function Settings() {
+
+    const save = async () => {
+        await Config.save();
+    };
     return (
         <Flex gap="middle" justify='center' align='center'>
-            <Button type="primary" shape="round" size='large' style={{ width: '30%' }}>
-                todo
-            </Button>
+            <InputNumber min={1} defaultValue={45} onChange={(value) => Config.set("focusTime", value)} />
+            <Button onClick={save}>save</Button>
         </Flex>
     )
-};
-export default Setting;
+}

@@ -21,6 +21,7 @@ tauri = { version = "1.5.4", features = ["notification-all"] }
 chrono = "0.4"
 rusqlite = { version = "0.30.0", features = ["bundled"] }
 tauri-plugin-log = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
+tauri-plugin-store = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "v1" }
 log = "^0.4"
 
 [features]

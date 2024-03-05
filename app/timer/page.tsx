@@ -6,6 +6,7 @@ import { Button, Flex } from 'antd';
 import { invoke } from '@tauri-apps/api/tauri';
 import { trace, info, error, attachConsole } from "tauri-plugin-log-api";
 import { tip } from '../notification';
+import { Config } from '../config';
 
 
 
@@ -15,7 +16,7 @@ const TinyRing = dynamic(() => import('@ant-design/plots').then(({ Tiny }) => Ti
 
 
 interface CountdownShow {
-    time_remaining: string,
+    time_remaining: number | string,
     progress_remaining: number,
     is_tip: boolean,
     tip_message: string,
@@ -41,15 +42,44 @@ function TimerButton({ state, startFunc, stopFunc, extendFunc }: { state: number
 };
 
 
+function TimerRing({ data }: { data: CountdownShow }) {
+    const config = {
+        percent: data.progress_remaining,
+        color: ['#E8EFF5', '#1677ff'],
+        animate: false,
+        annotations: [
+            {
+                type: 'text',
+                radius: 0.9,
+                style: {
+                    text: typeof data.time_remaining === "string" ? data.time_remaining : `${data.time_remaining}:00`,
+                    x: '50%',
+                    y: '50%',
+                    textAlign: 'center',
+                    fontSize: 50,
+                    fontStyle: 'bold',
+                },
+            },
+        ],
+    };
+
+    return <TinyRing {...config} />
+
+}
+
+
 
 export default function Timer() {
 
     attachConsole();
-    const [data, setData] = useState<CountdownShow>({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     const [state, setState] = useState<number>(0);
     const [countdownId, setCountdownId] = useState<number | undefined>(undefined);
     const [timerID, setTimerID] = useState<number | undefined>(undefined);
+    const [data, setData] = useState<CountdownShow>({ time_remaining: 45, progress_remaining: 1, is_tip: false, tip_message: "" });
 
+    const initData = async () => Config.get("focusTime").then((focusTime) => {
+        setData({ time_remaining: focusTime as number, progress_remaining: 1, is_tip: false, tip_message: "" })
+    });
 
     const fetchData = async () => invoke<CountdownShow>('get_time', { countdown_id: countdownId }).then((respTime) => {
         setData(respTime);
@@ -63,7 +93,7 @@ export default function Timer() {
     });
 
 
-    const startCountdown = async () => invoke<number>('add').then((id) => {
+    const startCountdown = async () => invoke<number>('add', { intervalMinute: data.time_remaining }).then((id) => {
         console.log("当前计时器id为:" + id);
         setCountdownId(id);
         setState(1);
@@ -72,8 +102,8 @@ export default function Timer() {
 
     const stopCountdown = async () => invoke<string>('stop', { countdown_id: countdownId }).then(() => {
         clearInterval(timerID);
+        initData();
         setState(0);
-        setData({ time_remaining: "45:60", progress_remaining: 1, is_tip: false, tip_message: "" });
     })
 
     const extendCountdown = async () => invoke<string>('extend', { countdown_id: countdownId }).then(() => { setState(1) })
@@ -85,32 +115,15 @@ export default function Timer() {
         }
     }, [countdownId]);
 
+    useEffect(() => {
+        initData();
+    }, []);
 
-
-
-    const config = {
-        percent: data.progress_remaining,
-        color: ['#E8EFF5', '#1677ff'],
-        animate: false,
-        annotations: [
-            {
-                type: 'text',
-                radius: 0.9,
-                style: {
-                    text: data.time_remaining,
-                    x: '50%',
-                    y: '50%',
-                    textAlign: 'center',
-                    fontSize: 50,
-                    fontStyle: 'bold',
-                },
-            },
-        ],
-    };
     return (
         <Flex gap="middle" justify='center' align='center'>
             <section>
-                <TinyRing {...config} />
+                <TimerRing
+                    data={data} />
                 <Flex gap="middle" vertical justify='center' align='center'>
                     <TimerButton
                         state={state}

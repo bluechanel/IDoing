@@ -33,8 +33,9 @@ fn main() {
         .plugin(
             tauri_plugin_log::Builder::default()
                 .targets([LogTarget::LogDir, LogTarget::Stdout, LogTarget::Webview])
-                .build()
+                .build(),
         )
+        .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![get_time, add, stop, extend])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -86,8 +87,8 @@ fn get_time(countdown_id: u16) -> Result<CountdownShow, String> {
 }
 
 #[tauri::command]
-fn add() -> i64 {
-    add_countdown().expect("创建计时器失败")
+fn add(interval_minute: i64) -> i64 {
+    add_countdown(interval_minute).expect("创建计时器失败")
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -142,7 +143,7 @@ fn init_db() -> Result<()> {
     Ok(())
 }
 
-fn add_countdown() -> Result<i64> {
+fn add_countdown(minute: i64) -> Result<i64> {
     let conn = Connection::open(DB_PATH)?;
 
     let current_timstamp = Utc::now().timestamp();
@@ -152,7 +153,7 @@ fn add_countdown() -> Result<i64> {
         cd_name: "默认".to_string(),
         cd_type: "work".to_string(),
         cd_start_time: current_timstamp,
-        cd_end_time: current_timstamp + 45 * 60,
+        cd_end_time: current_timstamp + minute * 60,
     };
 
     let mut stmt = conn
