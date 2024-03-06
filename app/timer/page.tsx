@@ -81,17 +81,6 @@ export default function Timer() {
         setData({ time_remaining: focusTime as number, progress_remaining: 1, is_tip: false, tip_message: "" })
     });
 
-    const fetchData = async () => invoke<CountdownShow>('get_time', { countdown_id: countdownId }).then((respTime) => {
-        setData(respTime);
-        if (respTime.is_tip) {
-            tip(respTime.tip_message);
-        };
-        if (respTime.progress_remaining <= 0) {
-            clearInterval(timerID);
-            setState(0);
-        }
-    });
-
 
     const startCountdown = async () => invoke<number>('add', { intervalMinute: data.time_remaining }).then((id) => {
         console.log("当前计时器id为:" + id);
@@ -111,7 +100,19 @@ export default function Timer() {
 
     useEffect(() => {
         if (countdownId != undefined) {
-            setTimerID(window.setInterval(fetchData, 1000));
+            const intervalId = window.setInterval(() => {
+                invoke<CountdownShow>('get_time', { countdown_id: countdownId }).then((respTime) => {
+                    setData(respTime);
+                    if (respTime.is_tip) {
+                        tip(respTime.tip_message);
+                    };
+                    if (respTime.progress_remaining <= 0) {
+                        clearInterval(intervalId);
+                        setState(0);
+                    }
+                })
+            }, 1000)
+            setTimerID(intervalId);
         }
     }, [countdownId]);
 
