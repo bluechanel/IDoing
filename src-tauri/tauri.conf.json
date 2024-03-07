@@ -6,7 +6,7 @@
     "distDir": "../out"
   },
   "package": {
-    "productName": "tp-app",
+    "productName": "IDoing",
     "version": "0.1.0"
   },
   "tauri": {
@@ -60,7 +60,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "tp-app",
+        "title": "IDoing",
         "width": 800
       }
     ]
