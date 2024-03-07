@@ -13,7 +13,7 @@ const RootLayout = ({ children }: React.PropsWithChildren) => (
     <body>
       <Layout hasSider>
         <Sider width="50px" theme="light" style={{ overflow: 'auto', height: '100vh', position: 'fixed', left: 0, top: 0, bottom: 0 }}>
-          <Flex gap="middle" vertical className='w-8 h-max' justify="center" align="center">
+          <Flex gap="middle" vertical justify="center" align="center">
             <Avatar shape="square" size="large" src="/app-icon.png" />
             <Button shape="circle" icon={<ClockCircleOutlined />} href='/timer' />
             <Button shape="circle" icon={<PieChartOutlined />} href='/analyse' />
