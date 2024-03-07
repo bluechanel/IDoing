@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import { ClockCircleOutlined, SettingOutlined, PieChartOutlined } from '@ant-design/icons';
 import { Avatar, Button, ConfigProvider, Flex, Layout, Switch, theme } from 'antd';
+import './globals.css';
 
 
 
@@ -10,14 +11,24 @@ import { Avatar, Button, ConfigProvider, Flex, Layout, Switch, theme } from 'ant
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [themeColor, setThemeColor] = useState(() => theme.darkAlgorithm);
+  const [sideBgColor, setSideBgColor] = useState("rgb(0, 0, 0)");
 
   const { Content, Sider } = Layout;
   return (
     <html lang="en">
       <body>
-        <ConfigProvider theme={{ algorithm: themeColor }}>
+        <ConfigProvider theme={{
+          algorithm: themeColor,
+          components: {
+            Layout: {
+              algorithm: true,
+              triggerBg: sideBgColor,
+              siderBg: sideBgColor,
+            }
+          }
+        }}>
           <Layout hasSider>
-            <Sider width="50px" style={{ overflow: 'auto', height: '100vh', position: 'fixed', left: 0, top: 0, bottom: 0 }}>
+            <Sider width="50px" className='h-screen'>
               <Flex gap="middle" vertical justify="center" align="center">
                 <Avatar shape="square" size="large" src="/app-icon.png" />
                 <Button shape="circle" icon={<ClockCircleOutlined />} href='/timer' />
@@ -26,13 +37,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Switch size="small" defaultChecked onChange={(checked) => {
                   if (checked) {
                     setThemeColor(() => { return theme.darkAlgorithm; })
+                    setSideBgColor("rgb(0, 0, 0)")
                   } else {
                     setThemeColor(() => { return theme.defaultAlgorithm; })
+                    setSideBgColor("rgb(255, 255, 255)")
                   }
                 }} />
               </Flex>
             </Sider>
-            <Content>
+            <Content className='h-screen'>
               <AntdRegistry>{children}</AntdRegistry>
             </Content>
           </Layout>

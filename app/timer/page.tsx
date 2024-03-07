@@ -121,11 +121,11 @@ export default function Timer() {
     }, []);
 
     return (
-        <Flex gap="middle" justify='center' align='center'>
+        <Flex className='h-screen flex-wrap justify-center content-center'>
             <section>
                 <TimerRing
                     data={data} />
-                <Flex gap="middle" vertical justify='center' align='center'>
+                <Flex className='flex-wrap justify-center content-center'>
                     <TimerButton
                         state={state}
                         startFunc={startCountdown}
