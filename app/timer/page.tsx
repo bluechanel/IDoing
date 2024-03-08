@@ -34,6 +34,12 @@ function TimerButton({ state, startFunc, stopFunc, extendFunc }: { state: number
         </Button><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={stopFunc}>
                 End Focus
             </Button></>
+    } else if (state ==3 ){
+        return <><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
+            Break( 5min)
+        </Button><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
+                Continue Focus
+            </Button></>
     } else {
         return <Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
             Start
@@ -108,7 +114,7 @@ export default function Timer() {
                     };
                     if (respTime.progress_remaining <= 0) {
                         clearInterval(intervalId);
-                        setState(0);
+                        setState(3);
                     }
                 })
             }, 1000)
@@ -125,7 +131,7 @@ export default function Timer() {
             <section>
                 <TimerRing
                     data={data} />
-                <Flex className='flex-wrap justify-center content-center'>
+                <Flex className='flex-wrap justify-center content-center' vertical gap="middle">
                     <TimerButton
                         state={state}
                         startFunc={startCountdown}
