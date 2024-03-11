@@ -36,7 +36,7 @@ function TimerButton({ state, startFunc, stopFunc, extendFunc }: { state: number
             </Button></>
     } else if (state ==3 ){
         return <><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
-            Break( 5min)
+            Break(5min)
         </Button><Button type="primary" shape="round" size='large' style={{ width: '30%' }} onClick={startFunc}>
                 Continue Focus
             </Button></>
